@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "mthadley/elm-review-unit",
-    "summary": "",
+    "summary": "elm-review rules for working with the Unit type",
     "license": "BSD-3-Clause",
     "version": "1.0.0",
     "exposed-modules": [
