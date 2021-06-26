@@ -1,11 +1,11 @@
 # elm-review-unit
 
-Provides [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-review/latest/) rules to REPLACEME.
+Provides [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-review/latest/) rules to usage of Elm's "Unit" type, also known as `()`.
 
 
 ## Provided rules
 
-- [`NoUmatchedUnit`](https://package.elm-lang.org/packages/mthadley/elm-review-unit/1.0.0/NoUmatchedUnit) - Reports REPLACEME.
+- [`NoUmatchedUnit`](https://package.elm-lang.org/packages/mthadley/elm-review-unit/1.0.0/NoUmatchedUnit) - Reports when a `()` is ignored (`_`) instead of being matched.
 
 
 ## Configuration
