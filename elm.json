@@ -3,7 +3,7 @@
     "name": "mthadley/elm-review-unit",
     "summary": "elm-review rules for working with the Unit type",
     "license": "BSD-3-Clause",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "exposed-modules": [
         "NoUnmatchedUnit"
     ],
