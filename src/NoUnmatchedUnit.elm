@@ -1,4 +1,4 @@
-module NoUmatchedUnit exposing (rule)
+module NoUnmatchedUnit exposing (rule)
 
 {-|
 
@@ -18,7 +18,7 @@ import Review.Rule as Rule exposing (Error, Rule)
 {-| Reports when a Unit (`()`) is not matched in a pattern.
 
     config =
-        [ NoUmatchedUnit.rule
+        [ NoUnmatchedUnit.rule
         ]
 
 
@@ -49,13 +49,13 @@ import Review.Rule as Rule exposing (Error, Rule)
 You can try this rule out by running the following command:
 
 ```bash
-elm-review --template mthadley/elm-review-unit/example --rules NoUmatchedUnit
+elm-review --template mthadley/elm-review-unit/example --rules NoUnmatchedUnit
 ```
 
 -}
 rule : Rule
 rule =
-    Rule.newModuleRuleSchema "NoUmatchedUnit" ()
+    Rule.newModuleRuleSchema "NoUnmatchedUnit" ()
         |> Rule.withSimpleDeclarationVisitor declarationVisitor
         |> Rule.fromModuleRuleSchema
 

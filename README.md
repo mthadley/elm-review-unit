@@ -5,7 +5,7 @@ Provides [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-revi
 
 ## Provided rules
 
-- [`NoUmatchedUnit`](https://package.elm-lang.org/packages/mthadley/elm-review-unit/1.0.0/NoUmatchedUnit) - Reports when a `()` is ignored (`_`) instead of being matched.
+- [`NoUnmatchedUnit`](https://package.elm-lang.org/packages/mthadley/elm-review-unit/1.0.0/NoUnmatchedUnit) - Reports when a `()` is ignored (`_`) instead of being matched.
 
 
 ## Configuration
@@ -13,12 +13,12 @@ Provides [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-revi
 ```elm
 module ReviewConfig exposing (config)
 
-import NoUmatchedUnit
+import NoUnmatchedUnit
 import Review.Rule exposing (Rule)
 
 config : List Rule
 config =
-    [ NoUmatchedUnit.rule
+    [ NoUnmatchedUnit.rule
     ]
 ```
 

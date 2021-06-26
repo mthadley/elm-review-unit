@@ -1,13 +1,13 @@
-module NoUmatchedUnitTest exposing (all)
+module NoUnmatchedUnitTest exposing (all)
 
-import NoUmatchedUnit exposing (rule)
+import NoUnmatchedUnit exposing (rule)
 import Review.Test exposing (ExpectedError)
 import Test exposing (Test, describe, test)
 
 
 all : Test
 all =
-    describe "NoUmatchedUnit"
+    describe "NoUnmatchedUnit"
         [ test "should not report an error when a () is matched" <|
             \() ->
                 [ """
