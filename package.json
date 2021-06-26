@@ -1,0 +1,12 @@
+{
+  "name": "elm-review-unit",
+  "version": "1.0.0",
+  "description": "Elm review rules for the Unit type",
+  "main": "index.js",
+  "author": "Michael T. Hadley",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "elm-review": "^2.5.3"
+  }
+}
