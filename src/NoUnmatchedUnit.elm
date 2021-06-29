@@ -6,12 +6,17 @@ module NoUnmatchedUnit exposing (rule)
 
 -}
 
+import Dict exposing (Dict)
 import Elm.Syntax.Declaration as Declaration exposing (Declaration)
+import Elm.Syntax.Expression as Expression exposing (Expression)
 import Elm.Syntax.Node as Node exposing (Node)
 import Elm.Syntax.Pattern as Pattern exposing (Pattern)
 import Elm.Syntax.Range exposing (Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (TypeAnnotation)
+import Elm.Type
 import Review.Fix as Fix
+import Review.ModuleNameLookupTable exposing (ModuleNameLookupTable)
+import Review.Project.Dependency as Dependency exposing (Dependency)
 import Review.Rule as Rule exposing (Error, Rule)
 
 
@@ -55,9 +60,96 @@ elm-review --template mthadley/elm-review-unit/example --rules NoUnmatchedUnit
 -}
 rule : Rule
 rule =
-    Rule.newModuleRuleSchema "NoUnmatchedUnit" ()
+    Rule.newProjectRuleSchema "NoUnmatchedUnit" initProjectContext
+        |> Rule.withModuleVisitor moduleVisitor
+        |> Rule.withModuleContextUsingContextCreator
+            { fromProjectToModule = fromProjectToModule
+            , fromModuleToProject = fromModuleToProject
+            , foldProjectContexts = \_ -> identity
+            }
+        |> Rule.withDependenciesProjectVisitor
+            (\deps context ->
+                ( []
+                , { context | qualifiedNameToType = collectDeps deps }
+                )
+            )
+        |> Rule.fromProjectRuleSchema
+
+
+moduleVisitor schema =
+    schema
+        |> Rule.withExpressionEnterVisitor
+            (\node context -> ( expressionVisitor node context, context ))
         |> Rule.withSimpleDeclarationVisitor declarationVisitor
-        |> Rule.fromModuleRuleSchema
+
+
+type alias ModuleContext =
+    { lookupTable : ModuleNameLookupTable
+    , qualifiedNameToType : Dict String Elm.Type.Type
+    }
+
+
+type alias ProjectContext =
+    { qualifiedNameToType : Dict String Elm.Type.Type
+    }
+
+
+initProjectContext : ProjectContext
+initProjectContext =
+    { qualifiedNameToType = Dict.empty
+    }
+
+
+fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
+fromProjectToModule =
+    Rule.initContextCreator
+        (\lookupTable { qualifiedNameToType } ->
+            { lookupTable = lookupTable
+            , qualifiedNameToType = qualifiedNameToType
+            }
+        )
+        |> Rule.withModuleNameLookupTable
+
+
+fromModuleToProject : Rule.ContextCreator ModuleContext ProjectContext
+fromModuleToProject =
+    Rule.initContextCreator
+        (\{ qualifiedNameToType } -> { qualifiedNameToType = qualifiedNameToType })
+
+
+expressionVisitor : Node Expression -> ModuleContext -> List (Error {})
+expressionVisitor node context =
+    case Node.value node of
+        Expression.Application (first :: firstArg :: restArgs) ->
+            case Node.value first of
+                Expression.FunctionOrValue mod name ->
+                    let
+                        _ =
+                            Debug.log "nodes" <| { mod = mod, name = name }
+                    in
+                    []
+
+                _ ->
+                    []
+
+        _ ->
+            []
+
+
+collectDeps : Dict String Dependency -> Dict String Elm.Type.Type
+collectDeps rawDeps =
+    let
+        collectModule mod =
+            List.map (\value -> ( mod.name ++ "." ++ value.name, value.tipe ))
+                mod.values
+
+        collectHelp dep deps =
+            Dependency.modules dep
+                |> List.concatMap collectModule
+                |> Dict.fromList
+                |> Dict.union deps
+    in
+    List.foldl collectHelp Dict.empty <| Dict.values rawDeps
 
 
 declarationVisitor : Node Declaration -> List (Error {})
