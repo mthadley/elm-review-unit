@@ -7,6 +7,7 @@ module NoUnmatchedUnit exposing (rule)
 -}
 
 import Dict exposing (Dict)
+import Elm.Docs
 import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Expression as Expression exposing (Expression)
 import Elm.Syntax.Node as Node exposing (Node)
@@ -17,7 +18,7 @@ import Elm.Type
 import Review.Fix as Fix
 import Review.ModuleNameLookupTable exposing (ModuleNameLookupTable)
 import Review.Project.Dependency as Dependency exposing (Dependency)
-import Review.Rule as Rule exposing (Error, Rule)
+import Review.Rule as Rule exposing (Error, ModuleRuleSchema, Rule)
 
 
 {-| Reports when a Unit (`()`) is not matched in a pattern.
@@ -76,6 +77,12 @@ rule =
         |> Rule.fromProjectRuleSchema
 
 
+moduleVisitor :
+    ModuleRuleSchema {} ModuleContext
+    ->
+        ModuleRuleSchema
+            { hasAtLeastOneVisitor : () }
+            ModuleContext
 moduleVisitor schema =
     schema
         |> Rule.withExpressionEnterVisitor
@@ -139,10 +146,12 @@ expressionVisitor node context =
 collectDeps : Dict String Dependency -> Dict String Elm.Type.Type
 collectDeps rawDeps =
     let
+        collectModule : Elm.Docs.Module -> List ( String, Elm.Type.Type )
         collectModule mod =
             List.map (\value -> ( mod.name ++ "." ++ value.name, value.tipe ))
                 mod.values
 
+        collectHelp : Dependency -> Dict String Elm.Type.Type -> Dict String Elm.Type.Type
         collectHelp dep deps =
             Dependency.modules dep
                 |> List.concatMap collectModule
