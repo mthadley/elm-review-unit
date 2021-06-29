@@ -103,6 +103,7 @@ foo ((), x) =
                 \() ->
                     """
 module A exposing (..)
+import Test exposing (test)
 tests =
     describe
         [ test "1 + 1 = 2" <|
@@ -115,7 +116,7 @@ tests =
                             [ expectedErrorWithFix
                                 """
 module A exposing (..)
-import Text exposing (test)
+import Test exposing (test)
 tests =
     describe
         [ test "1 + 1 = 2" <|

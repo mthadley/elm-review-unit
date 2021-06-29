@@ -16,7 +16,7 @@ import Elm.Syntax.Range exposing (Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (TypeAnnotation)
 import Elm.Type
 import Review.Fix as Fix
-import Review.ModuleNameLookupTable exposing (ModuleNameLookupTable)
+import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
 import Review.Project.Dependency as Dependency exposing (Dependency)
 import Review.Rule as Rule exposing (Error, ModuleRuleSchema, Rule)
 
@@ -69,20 +69,13 @@ rule =
             , foldProjectContexts = \_ -> identity
             }
         |> Rule.withDependenciesProjectVisitor
-            (\deps context ->
-                ( []
-                , { context | qualifiedNameToType = collectDeps deps }
-                )
-            )
+            (\deps context -> ( [], { qualifiedNameToType = collectDeps deps } ))
         |> Rule.fromProjectRuleSchema
 
 
 moduleVisitor :
     ModuleRuleSchema {} ModuleContext
-    ->
-        ModuleRuleSchema
-            { hasAtLeastOneVisitor : () }
-            ModuleContext
+    -> ModuleRuleSchema { hasAtLeastOneVisitor : () } ModuleContext
 moduleVisitor schema =
     schema
         |> Rule.withExpressionEnterVisitor
@@ -132,7 +125,11 @@ expressionVisitor node context =
                 Expression.FunctionOrValue mod name ->
                     let
                         _ =
-                            Debug.log "nodes" <| { mod = mod, name = name }
+                            Debug.log "nodes" <|
+                                { mod = mod
+                                , name = name
+                                , lookup = lookupTypeFromNode context name first
+                                }
                     in
                     []
 
@@ -141,6 +138,17 @@ expressionVisitor node context =
 
         _ ->
             []
+
+
+lookupTypeFromNode : ModuleContext -> String -> Node Expression -> Maybe Elm.Type.Type
+lookupTypeFromNode context name node =
+    ModuleNameLookupTable.moduleNameFor context.lookupTable node
+        |> Maybe.andThen (lookupTypeFromName context name)
+
+
+lookupTypeFromName : ModuleContext -> String -> List String -> Maybe Elm.Type.Type
+lookupTypeFromName context name modulePath =
+    Dict.get (String.join "." <| modulePath ++ [ name ]) context.qualifiedNameToType
 
 
 collectDeps : Dict String Dependency -> Dict String Elm.Type.Type
