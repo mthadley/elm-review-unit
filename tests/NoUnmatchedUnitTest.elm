@@ -38,7 +38,7 @@ foo _ =
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
-                        [ expectedError """
+                        [ expectedErrorWithFix """
 module A exposing (..)
 foo : () -> Int
 foo () =
@@ -55,7 +55,7 @@ foo3 _ _ x =
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
-                        [ expectedError """
+                        [ expectedErrorWithFix """
 module A exposing (..)
 foo3 : () -> () -> Int -> Int
 foo3 () _ x =
@@ -65,7 +65,7 @@ foo3 () _ x =
                                 { start = { row = 4, column = 6 }
                                 , end = { row = 4, column = 7 }
                                 }
-                        , expectedError """
+                        , expectedErrorWithFix """
 module A exposing (..)
 foo3 : () -> () -> Int -> Int
 foo3 _ () x =
@@ -86,7 +86,7 @@ foo (_, x) =
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
-                        [ expectedError """
+                        [ expectedErrorWithFix """
 module A exposing (..)
 foo2 : ((), Int) -> Int
 foo ((), x) =
@@ -96,8 +96,8 @@ foo ((), x) =
         ]
 
 
-expectedError : String -> ExpectedError
-expectedError whenFixed =
+expectedErrorWithFix : String -> ExpectedError
+expectedErrorWithFix whenFixed =
     Review.Test.error
         { message = "Use the Unit pattern \"()\" instead of ignoring it with \"_\"."
         , details =
