@@ -411,6 +411,10 @@ normalizeExpression node =
         Node range (Expression.Application expressions) ->
             Node range (Expression.Application (List.map normalizeExpression expressions))
 
+        Node range (Expression.OperatorApplication "<|" _ (Node applicationRange (Expression.Application expressions)) right) ->
+            Node range
+                (Expression.Application (expressions ++ [ right ]))
+
         Node range (Expression.OperatorApplication name dir left right) ->
             Node range
                 (Expression.OperatorApplication name

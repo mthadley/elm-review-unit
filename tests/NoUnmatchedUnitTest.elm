@@ -120,7 +120,30 @@ tests =
         ]
 """
                         ]
-        , todo "Test for matching tuple in lambda with pizza in deps"
+        , test "should report when _ is used with a pizza and dependency that takes a lazy lambda" <|
+            \() ->
+                """
+module A exposing (..)
+import Test exposing (test)
+tests =
+    describe
+        [ test "1 + 1 = 2" <|
+            \\_ -> Expect.equal 2 (1 + 1)
+        ]
+"""
+                    |> Review.Test.runWithProjectData testProject rule
+                    |> Review.Test.expectErrors
+                        [ expectedErrorWithFix
+                            """
+module A exposing (..)
+import Test exposing (test)
+tests =
+    describe
+        [ test "1 + 1 = 2" <|
+            \\() -> Expect.equal 2 (1 + 1)
+        ]
+"""
+                        ]
         , todo "Test for matching tuple in type in deps"
         , todo "Test for matching tuple in tuple in deps"
         ]
