@@ -69,7 +69,7 @@ rule =
             , foldProjectContexts = \_ -> identity
             }
         |> Rule.withDependenciesProjectVisitor
-            (\deps context -> ( [], { qualifiedNameToType = collectDeps deps } ))
+            (\deps _ -> ( [], { qualifiedNameToType = collectDeps deps } ))
         |> Rule.fromProjectRuleSchema
 
 
@@ -122,7 +122,7 @@ expressionVisitor node context =
     case Node.value (normalizeExpression node) of
         Expression.Application (first :: firstArg :: restArgs) ->
             case Node.value first of
-                Expression.FunctionOrValue mod name ->
+                Expression.FunctionOrValue _ name ->
                     case lookupTypeFromNode context name first of
                         Just tipe ->
                             expressionVisitorWithType tipe (firstArg :: restArgs)
@@ -149,7 +149,7 @@ expressionVisitorWithType tipe args =
                 _ ->
                     expressionVisitorWithType rightTypeArg restNodes
 
-        ( Elm.Type.Lambda leftTypeArg _, node :: restNodes ) ->
+        ( Elm.Type.Lambda leftTypeArg _, node :: _ ) ->
             case Node.value node of
                 Expression.LambdaExpression lambda ->
                     patternVisitorWithType leftTypeArg lambda.args
@@ -176,7 +176,7 @@ expressionVisitorWithType tipe args =
                         |> List.concat
                    )
 
-        ( Elm.Type.Tuple [], firstArgNode :: _ ) ->
+        ( Elm.Type.Tuple [], _ ) ->
             []
 
         ( Elm.Type.Record _ _, _ ) ->
@@ -232,7 +232,7 @@ patternVisitorWithType tipe argPatterns =
             patternVisitorWithType leftType [ node ]
                 ++ patternVisitorWithType rightType restNodes
 
-        ( Elm.Type.Lambda leftType _, node :: restNodes ) ->
+        ( Elm.Type.Lambda leftType _, node :: _ ) ->
             patternVisitorWithType leftType [ node ]
 
         ( Elm.Type.Lambda _ _, [] ) ->
@@ -411,9 +411,17 @@ normalizeExpression node =
         Node range (Expression.Application expressions) ->
             Node range (Expression.Application (List.map normalizeExpression expressions))
 
-        Node range (Expression.OperatorApplication "<|" _ (Node applicationRange (Expression.Application expressions)) right) ->
+        Node range (Expression.OperatorApplication "<|" _ (Node _ (Expression.Application expressions)) right) ->
             Node range
-                (Expression.Application (expressions ++ [ right ]))
+                (Expression.Application
+                    (List.map normalizeExpression (expressions ++ [ right ]))
+                )
+
+        Node range (Expression.OperatorApplication "|>" _ left (Node _ (Expression.Application expressions))) ->
+            Node range
+                (Expression.Application
+                    (List.map normalizeExpression (expressions ++ [ left ]))
+                )
 
         Node range (Expression.OperatorApplication name dir left right) ->
             Node range
@@ -460,7 +468,7 @@ normalizeExpression node =
         Node range (Expression.TupledExpression expressions) ->
             Node range (Expression.TupledExpression (List.map normalizeExpression expressions))
 
-        Node range (Expression.ParenthesizedExpression expression) ->
+        Node _ (Expression.ParenthesizedExpression expression) ->
             expression
 
         Node range (Expression.LetExpression letBlock) ->
