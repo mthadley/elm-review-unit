@@ -6,7 +6,7 @@ import Review.Project as Project exposing (Project)
 import Review.Project.Dependency as Dependency exposing (Dependency)
 import Review.Test exposing (ExpectedError)
 import Review.Test.Dependencies
-import Test exposing (Test, describe, only, test, todo)
+import Test exposing (Test, describe, test, todo)
 import Test.Extra
 
 
@@ -144,10 +144,9 @@ tests =
         ]
 """
                         ]
-        , only <|
-            test "should report when _ is used with a right pizza and dependency that takes a lazy lambda" <|
-                \() ->
-                    """
+        , test "should report when _ is used with a right pizza and dependency that takes a lazy lambda" <|
+            \() ->
+                """
 module A exposing (..)
 import Test exposing (test)
 tests =
@@ -156,10 +155,10 @@ tests =
            |> test "1 + 1 = 2"
         ]
 """
-                        |> Review.Test.runWithProjectData testProject rule
-                        |> Review.Test.expectErrors
-                            [ expectedErrorWithFix
-                                """
+                    |> Review.Test.runWithProjectData testProject rule
+                    |> Review.Test.expectErrors
+                        [ expectedErrorWithFix
+                            """
 module A exposing (..)
 import Test exposing (test)
 tests =
@@ -168,7 +167,7 @@ tests =
            |> test "1 + 1 = 2"
         ]
 """
-                            ]
+                        ]
         , todo "Test for matching tuple in type in deps"
         , todo "Test for matching tuple in tuple in deps"
         ]

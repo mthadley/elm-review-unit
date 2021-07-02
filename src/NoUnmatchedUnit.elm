@@ -140,27 +140,23 @@ expressionVisitor node context =
 expressionVisitorWithType : Elm.Type.Type -> List (Node Expression) -> List (Error {})
 expressionVisitorWithType tipe args =
     case ( tipe, args ) of
-        ( Elm.Type.Lambda leftTypeArg ((Elm.Type.Lambda _ _) as rightTypeArg), node :: restNodes ) ->
-            case Node.value node of
-                Expression.LambdaExpression lambda ->
-                    patternVisitorWithType leftTypeArg lambda.args
-                        ++ expressionVisitorWithType rightTypeArg restNodes
+        ( Elm.Type.Lambda left ((Elm.Type.Lambda _ _) as right), (Node _ (Expression.LambdaExpression lambda)) :: restNodes ) ->
+            patternVisitorWithType left lambda.args
+                ++ expressionVisitorWithType right restNodes
 
-                _ ->
-                    expressionVisitorWithType rightTypeArg restNodes
+        ( Elm.Type.Lambda _ ((Elm.Type.Lambda _ _) as right), _ :: restNodes ) ->
+            expressionVisitorWithType right restNodes
 
-        ( Elm.Type.Lambda leftTypeArg _, node :: _ ) ->
-            case Node.value node of
-                Expression.LambdaExpression lambda ->
-                    patternVisitorWithType leftTypeArg lambda.args
+        ( Elm.Type.Lambda left _, (Node _ (Expression.LambdaExpression lambda)) :: _ ) ->
+            patternVisitorWithType left lambda.args
 
-                _ ->
-                    []
+        ( Elm.Type.Lambda _ _, _ :: _ ) ->
+            []
 
-        ( Elm.Type.Type _ (firstTypeArg :: restTypeArgs), node :: restNodes ) ->
-            expressionVisitorWithType firstTypeArg [ node ]
+        ( Elm.Type.Type _ (firstArg :: restArgs), node :: restNodes ) ->
+            expressionVisitorWithType firstArg [ node ]
                 ++ (List.map2 (\ta p -> expressionVisitorWithType ta [ p ])
-                        restTypeArgs
+                        restArgs
                         restNodes
                         |> List.concat
                    )
@@ -168,10 +164,10 @@ expressionVisitorWithType tipe args =
         ( Elm.Type.Type _ [], _ ) ->
             []
 
-        ( Elm.Type.Tuple (firstTypeArg :: restTypeArgs), node :: restNodes ) ->
-            expressionVisitorWithType firstTypeArg [ node ]
+        ( Elm.Type.Tuple (firstArg :: restArgs), node :: restNodes ) ->
+            expressionVisitorWithType firstArg [ node ]
                 ++ (List.map2 (\ta p -> expressionVisitorWithType ta [ p ])
-                        restTypeArgs
+                        restArgs
                         restNodes
                         |> List.concat
                    )
@@ -192,48 +188,30 @@ expressionVisitorWithType tipe args =
 patternVisitorWithType : Elm.Type.Type -> List (Node Pattern) -> List (Error {})
 patternVisitorWithType tipe argPatterns =
     case ( tipe, List.map normalizePattern argPatterns ) of
-        ( Elm.Type.Tuple [], node :: _ ) ->
-            case Node.value node of
-                Pattern.UnitPattern ->
-                    []
+        ( Elm.Type.Tuple [], ((Node _ Pattern.AllPattern) as node) :: _ ) ->
+            [ reportUnitPatternError (Node.range node) ]
 
-                Pattern.AllPattern ->
-                    [ reportUnitPatternError (Node.range node) ]
-
-                _ ->
-                    []
-
-        ( Elm.Type.Tuple tupleArgs, node :: _ ) ->
-            case Node.value node of
-                Pattern.TuplePattern patterns ->
-                    List.map2 (\ta p -> patternVisitorWithType ta [ p ])
-                        tupleArgs
-                        patterns
-                        |> List.concat
-
-                _ ->
-                    []
+        ( Elm.Type.Tuple tupleArgs, (Node _ (Pattern.TuplePattern patterns)) :: _ ) ->
+            List.map2 (\ta p -> patternVisitorWithType ta [ p ])
+                tupleArgs
+                patterns
+                |> List.concat
 
         ( Elm.Type.Tuple _, _ ) ->
             []
 
-        ( Elm.Type.Type _ typeArgs, node :: _ ) ->
-            case Node.value node of
-                Pattern.NamedPattern _ patterns ->
-                    List.map2 (\ta p -> patternVisitorWithType ta [ p ])
-                        typeArgs
-                        patterns
-                        |> List.concat
+        ( Elm.Type.Type _ typeArgs, (Node _ (Pattern.NamedPattern _ patterns)) :: _ ) ->
+            List.map2 (\ta p -> patternVisitorWithType ta [ p ])
+                typeArgs
+                patterns
+                |> List.concat
 
-                _ ->
-                    []
+        ( Elm.Type.Lambda left ((Elm.Type.Lambda _ _) as right), node :: restNodes ) ->
+            patternVisitorWithType left [ node ]
+                ++ patternVisitorWithType right restNodes
 
-        ( Elm.Type.Lambda leftType ((Elm.Type.Lambda _ _) as rightType), node :: restNodes ) ->
-            patternVisitorWithType leftType [ node ]
-                ++ patternVisitorWithType rightType restNodes
-
-        ( Elm.Type.Lambda leftType _, node :: _ ) ->
-            patternVisitorWithType leftType [ node ]
+        ( Elm.Type.Lambda left _, node :: _ ) ->
+            patternVisitorWithType left [ node ]
 
         ( Elm.Type.Lambda _ _, [] ) ->
             []
@@ -295,31 +273,21 @@ declarationVisitor node =
 visitDeclarationAndType : Node TypeAnnotation -> List (Node Pattern) -> List (Error {})
 visitDeclarationAndType typeAnnotation arguments =
     case ( Node.value typeAnnotation, arguments ) of
-        ( TypeAnnotation.Unit, node :: _ ) ->
-            case Node.value node of
-                Pattern.AllPattern ->
-                    [ reportUnitPatternError (Node.range node) ]
-
-                _ ->
-                    []
+        ( TypeAnnotation.Unit, ((Node _ Pattern.AllPattern) as node) :: _ ) ->
+            [ reportUnitPatternError (Node.range node) ]
 
         ( TypeAnnotation.Unit, _ ) ->
             []
 
-        ( TypeAnnotation.Tupled typeAnnotations, node :: _ ) ->
-            case Node.value node of
-                Pattern.TuplePattern patterns ->
-                    List.map2 (\ta p -> visitDeclarationAndType ta [ p ])
-                        typeAnnotations
-                        patterns
-                        |> List.concat
+        ( TypeAnnotation.Tupled typeAnnotations, (Node _ (Pattern.TuplePattern patterns)) :: _ ) ->
+            List.map2 (\ta p -> visitDeclarationAndType ta [ p ])
+                typeAnnotations
+                patterns
+                |> List.concat
 
-                _ ->
-                    []
-
-        ( TypeAnnotation.FunctionTypeAnnotation leftArg rightArg, leftPattern :: restPatterns ) ->
-            visitDeclarationAndType leftArg [ leftPattern ]
-                ++ visitDeclarationAndType rightArg restPatterns
+        ( TypeAnnotation.FunctionTypeAnnotation left right, pattern :: restPatterns ) ->
+            visitDeclarationAndType left [ pattern ]
+                ++ visitDeclarationAndType right restPatterns
 
         ( TypeAnnotation.FunctionTypeAnnotation _ _, [] ) ->
             []
