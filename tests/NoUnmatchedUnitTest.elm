@@ -1,8 +1,13 @@
 module NoUnmatchedUnitTest exposing (all)
 
+import Elm.Type as Type
 import NoUnmatchedUnit exposing (rule)
+import Review.Project as Project exposing (Project)
+import Review.Project.Dependency as Dependency exposing (Dependency)
 import Review.Test exposing (ExpectedError)
+import Review.Test.Dependencies
 import Test exposing (Test, describe, test)
+import Test.Extra
 
 
 all : Test
@@ -93,6 +98,76 @@ foo ((), x) =
     x
 """
                         ]
+        , test "should report when _ is used with a dependency that takes a lazy lambda" <|
+            \() ->
+                """
+module A exposing (..)
+import Test exposing (test)
+tests =
+    describe
+        [ test "1 + 1 = 2" (\\_ -> Expect.equal 2 (1 + 1))
+        ]
+"""
+                    |> Review.Test.runWithProjectData testProject rule
+                    |> Review.Test.expectErrors
+                        [ expectedErrorWithFix
+                            """
+module A exposing (..)
+import Test exposing (test)
+tests =
+    describe
+        [ test "1 + 1 = 2" (\\() -> Expect.equal 2 (1 + 1))
+        ]
+"""
+                        ]
+        , test "should report when _ is used with a left pizza and dependency that takes a lazy lambda" <|
+            \() ->
+                """
+module A exposing (..)
+import Test exposing (test)
+tests =
+    describe
+        [ test "1 + 1 = 2" <|
+            \\_ -> Expect.equal 2 (1 + 1)
+        ]
+"""
+                    |> Review.Test.runWithProjectData testProject rule
+                    |> Review.Test.expectErrors
+                        [ expectedErrorWithFix
+                            """
+module A exposing (..)
+import Test exposing (test)
+tests =
+    describe
+        [ test "1 + 1 = 2" <|
+            \\() -> Expect.equal 2 (1 + 1)
+        ]
+"""
+                        ]
+        , test "should report when _ is used with a right pizza and dependency that takes a lazy lambda" <|
+            \() ->
+                """
+module A exposing (..)
+import Test exposing (test)
+tests =
+    describe
+        [ (\\_ -> Expect.equal 2 (1 + 1))
+           |> test "1 + 1 = 2"
+        ]
+"""
+                    |> Review.Test.runWithProjectData testProject rule
+                    |> Review.Test.expectErrors
+                        [ expectedErrorWithFix
+                            """
+module A exposing (..)
+import Test exposing (test)
+tests =
+    describe
+        [ (\\() -> Expect.equal 2 (1 + 1))
+           |> test "1 + 1 = 2"
+        ]
+"""
+                        ]
         ]
 
 
@@ -107,3 +182,55 @@ expectedErrorWithFix whenFixed =
         , under = "_"
         }
         |> Review.Test.whenFixed whenFixed
+
+
+testProject : Project
+testProject =
+    Review.Test.Dependencies.projectWithElmCore
+        |> Project.addDependency elmTestDependency
+
+
+elmTestDependency : Dependency
+elmTestDependency =
+    Dependency.create "elm-explorations/test"
+        (Test.Extra.createElmJson elmTestJson)
+        [ { name = "Test"
+          , comment = ""
+          , unions = []
+          , aliases = []
+          , values =
+                [ { name = "test"
+                  , comment = ""
+                  , tipe =
+                        Type.Lambda
+                            (Type.Type "String" [])
+                            (Type.Lambda
+                                (Type.Lambda (Type.Tuple []) (Type.Type "Expectation" []))
+                                (Type.Type "Test" [])
+                            )
+                  }
+                ]
+          , binops = []
+          }
+        ]
+
+
+elmTestJson : String
+elmTestJson =
+    """
+{
+  "type": "package",
+  "name": "elm-explorations/test",
+  "summary": "Summary",
+  "license": "MIT",
+  "version": "1.0.0",
+  "exposed-modules": [
+    "Test"
+  ],
+  "elm-version": "0.19.0 <= v < 0.20.0",
+  "dependencies": {
+    "elm/core": "1.0.0 <= v < 2.0.0"
+  },
+  "test-dependencies": {}
+}
+"""
