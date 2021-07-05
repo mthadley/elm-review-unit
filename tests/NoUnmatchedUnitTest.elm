@@ -6,7 +6,7 @@ import Review.Project as Project exposing (Project)
 import Review.Project.Dependency as Dependency exposing (Dependency)
 import Review.Test exposing (ExpectedError)
 import Review.Test.Dependencies
-import Test exposing (Test, describe, test, todo)
+import Test exposing (Test, describe, test)
 import Test.Extra
 
 
