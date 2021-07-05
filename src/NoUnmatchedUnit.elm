@@ -155,9 +155,7 @@ expressionVisitorWithType tipe args =
 
         ( Elm.Type.Type _ (firstArg :: restArgs), node :: restNodes ) ->
             expressionVisitorWithType firstArg [ node ]
-                ++ (List.map2 (\ta p -> expressionVisitorWithType ta [ p ])
-                        restArgs
-                        restNodes
+                ++ (List.map2 (\ta p -> expressionVisitorWithType ta [ p ]) restArgs restNodes
                         |> List.concat
                    )
 
@@ -201,9 +199,7 @@ patternVisitorWithType tipe argPatterns =
             []
 
         ( Elm.Type.Type _ typeArgs, (Node _ (Pattern.NamedPattern _ patterns)) :: _ ) ->
-            List.map2 (\ta p -> patternVisitorWithType ta [ p ])
-                typeArgs
-                patterns
+            List.map2 (\ta p -> patternVisitorWithType ta [ p ]) typeArgs patterns
                 |> List.concat
 
         ( Elm.Type.Lambda left ((Elm.Type.Lambda _ _) as right), node :: restNodes ) ->
@@ -280,9 +276,7 @@ visitDeclarationAndType typeAnnotation arguments =
             []
 
         ( TypeAnnotation.Tupled typeAnnotations, (Node _ (Pattern.TuplePattern patterns)) :: _ ) ->
-            List.map2 (\ta p -> visitDeclarationAndType ta [ p ])
-                typeAnnotations
-                patterns
+            List.map2 (\ta p -> visitDeclarationAndType ta [ p ]) typeAnnotations patterns
                 |> List.concat
 
         ( TypeAnnotation.FunctionTypeAnnotation left right, pattern :: restPatterns ) ->

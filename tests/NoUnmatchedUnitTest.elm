@@ -168,8 +168,6 @@ tests =
         ]
 """
                         ]
-        , todo "Test for matching tuple in type in deps"
-        , todo "Test for matching tuple in tuple in deps"
         ]
 
 
