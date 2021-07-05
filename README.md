@@ -5,7 +5,7 @@ Provides [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-revi
 
 ## Provided rules
 
-- [`NoUnmatchedUnit`](https://package.elm-lang.org/packages/mthadley/elm-review-unit/2.0.0/NoUnmatchedUnit) - Reports when a `()` is ignored (`_`) instead of being matched.
+- [`NoUnmatchedUnit`](https://package.elm-lang.org/packages/mthadley/elm-review-unit/2.0.1/NoUnmatchedUnit) - Reports when a `()` is ignored (`_`) instead of being matched.
 
 
 ## Configuration
