@@ -223,14 +223,14 @@ collectDeps rawDeps =
                 )
                 mod.values
 
-        collectHelp : Dependency -> Dict String Elm.Type.Type -> Dict String Elm.Type.Type
-        collectHelp dep deps =
+        collectHelp : a -> Dependency -> Dict String Elm.Type.Type -> Dict String Elm.Type.Type
+        collectHelp _ dep deps =
             Dependency.modules dep
                 |> List.concatMap collectModule
                 |> Dict.fromList
                 |> Dict.union deps
     in
-    List.foldl collectHelp Dict.empty <| Dict.values rawDeps
+    Dict.foldl collectHelp Dict.empty rawDeps
 
 
 declarationVisitor : Node Declaration -> List (Error {})
