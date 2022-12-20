@@ -119,18 +119,39 @@ fromModuleToProject =
 
 expressionVisitor : Node Expression -> ModuleContext -> List (Error {})
 expressionVisitor node context =
-    case Node.value (normalizeExpression node) of
-        Expression.Application (first :: firstArg :: restArgs) ->
-            case Node.value first of
-                Expression.FunctionOrValue _ name ->
-                    case lookupTypeFromNode context name first of
-                        Just tipe ->
-                            expressionVisitorWithType tipe (firstArg :: restArgs)
-
-                        Nothing ->
-                            []
+    case Node.value node of
+        Expression.OperatorApplication "<|" _ left right ->
+            case Node.value (removeParensFromExpr left) of
+                Expression.Application (fn :: args) ->
+                    reportUnitsInFunctionCall context fn (args ++ [ right ])
 
                 _ ->
+                    reportUnitsInFunctionCall context left [ right ]
+
+        Expression.OperatorApplication "|>" _ left right ->
+            case Node.value (removeParensFromExpr right) of
+                Expression.Application (fn :: args) ->
+                    reportUnitsInFunctionCall context fn (args ++ [ left ])
+
+                _ ->
+                    reportUnitsInFunctionCall context right [ left ]
+
+        Expression.Application (fn :: args) ->
+            reportUnitsInFunctionCall context fn args
+
+        _ ->
+            []
+
+
+reportUnitsInFunctionCall : ModuleContext -> Node Expression -> List (Node Expression) -> List (Error {})
+reportUnitsInFunctionCall context fn args =
+    case Node.value fn of
+        Expression.FunctionOrValue _ name ->
+            case lookupTypeFromNode context name fn of
+                Just tipe ->
+                    expressionVisitorWithType tipe (List.map removeParensFromExpr args)
+
+                Nothing ->
                     []
 
         _ ->
@@ -185,7 +206,7 @@ expressionVisitorWithType tipe args =
 
 patternVisitorWithType : Elm.Type.Type -> List (Node Pattern) -> List (Error {})
 patternVisitorWithType tipe argPatterns =
-    case ( tipe, List.map normalizePattern argPatterns ) of
+    case ( tipe, List.map removeParensFromPattern argPatterns ) of
         ( Elm.Type.Tuple [], ((Node _ Pattern.AllPattern) as node) :: _ ) ->
             [ reportUnitPatternError (Node.range node) ]
 
@@ -315,194 +336,21 @@ reportUnitPatternError range =
         [ Fix.replaceRangeBy range "()" ]
 
 
-normalizePattern : Node Pattern -> Node Pattern
-normalizePattern node =
-    case node of
-        Node range (Pattern.TuplePattern patterns) ->
-            Node range (Pattern.TuplePattern (List.map normalizePattern patterns))
+removeParensFromExpr : Node Expression -> Node Expression
+removeParensFromExpr node =
+    case Node.value node of
+        Expression.ParenthesizedExpression expr ->
+            removeParensFromExpr expr
 
-        Node range Pattern.AllPattern ->
-            Node range Pattern.AllPattern
-
-        Node range Pattern.UnitPattern ->
-            Node range Pattern.UnitPattern
-
-        Node range (Pattern.CharPattern char) ->
-            Node range (Pattern.CharPattern char)
-
-        Node range (Pattern.StringPattern string) ->
-            Node range (Pattern.StringPattern string)
-
-        Node range (Pattern.IntPattern int) ->
-            Node range (Pattern.IntPattern int)
-
-        Node range (Pattern.HexPattern hex) ->
-            Node range (Pattern.HexPattern hex)
-
-        Node range (Pattern.FloatPattern float) ->
-            Node range (Pattern.FloatPattern float)
-
-        Node range (Pattern.RecordPattern record) ->
-            Node range (Pattern.RecordPattern record)
-
-        Node range (Pattern.UnConsPattern left right) ->
-            Node range (Pattern.UnConsPattern (normalizePattern left) (normalizePattern right))
-
-        Node range (Pattern.ListPattern patterns) ->
-            Node range (Pattern.ListPattern (List.map normalizePattern patterns))
-
-        Node range (Pattern.VarPattern var) ->
-            Node range (Pattern.VarPattern var)
-
-        Node range (Pattern.NamedPattern name patterns) ->
-            Node range (Pattern.NamedPattern name (List.map normalizePattern patterns))
-
-        Node range (Pattern.AsPattern pattern name) ->
-            Node range (Pattern.AsPattern (normalizePattern pattern) name)
-
-        Node _ (Pattern.ParenthesizedPattern pattern) ->
-            pattern
+        _ ->
+            node
 
 
-normalizeExpression : Node Expression -> Node Expression
-normalizeExpression node =
-    case node of
-        Node range Expression.UnitExpr ->
-            Node range Expression.UnitExpr
+removeParensFromPattern : Node Pattern -> Node Pattern
+removeParensFromPattern node =
+    case Node.value node of
+        Pattern.ParenthesizedPattern pattern ->
+            removeParensFromPattern pattern
 
-        Node range (Expression.Application expressions) ->
-            Node range (Expression.Application (List.map normalizeExpression expressions))
-
-        Node range (Expression.OperatorApplication "<|" _ (Node _ (Expression.Application expressions)) right) ->
-            Node range
-                (Expression.Application
-                    (List.map normalizeExpression (expressions ++ [ right ]))
-                )
-
-        Node range (Expression.OperatorApplication "|>" _ left (Node _ (Expression.Application expressions))) ->
-            Node range
-                (Expression.Application
-                    (List.map normalizeExpression (expressions ++ [ left ]))
-                )
-
-        Node range (Expression.OperatorApplication name dir left right) ->
-            Node range
-                (Expression.OperatorApplication name
-                    dir
-                    (normalizeExpression left)
-                    (normalizeExpression right)
-                )
-
-        Node range (Expression.FunctionOrValue moduleName name) ->
-            Node range (Expression.FunctionOrValue moduleName name)
-
-        Node range (Expression.IfBlock condition trueCase falseCase) ->
-            Node range
-                (Expression.IfBlock (normalizeExpression condition)
-                    (normalizeExpression trueCase)
-                    (normalizeExpression falseCase)
-                )
-
-        Node range (Expression.PrefixOperator name) ->
-            Node range (Expression.PrefixOperator name)
-
-        Node range (Expression.Operator name) ->
-            Node range (Expression.Operator name)
-
-        Node range (Expression.Integer int) ->
-            Node range (Expression.Integer int)
-
-        Node range (Expression.Hex hex) ->
-            Node range (Expression.Hex hex)
-
-        Node range (Expression.Floatable float) ->
-            Node range (Expression.Floatable float)
-
-        Node range (Expression.Negation expression) ->
-            Node range (Expression.Negation (normalizeExpression expression))
-
-        Node range (Expression.Literal string) ->
-            Node range (Expression.Literal string)
-
-        Node range (Expression.CharLiteral char) ->
-            Node range (Expression.CharLiteral char)
-
-        Node range (Expression.TupledExpression expressions) ->
-            Node range (Expression.TupledExpression (List.map normalizeExpression expressions))
-
-        Node _ (Expression.ParenthesizedExpression expression) ->
-            expression
-
-        Node range (Expression.LetExpression letBlock) ->
-            Node range
-                (Expression.LetExpression
-                    { declarations =
-                        List.map
-                            (\letDeclaration ->
-                                case letDeclaration of
-                                    Node decRange (Expression.LetFunction function) ->
-                                        Node decRange (Expression.LetFunction function)
-
-                                    Node decRange (Expression.LetDestructuring pattern expression) ->
-                                        Node decRange
-                                            (Expression.LetDestructuring (normalizePattern pattern)
-                                                (normalizeExpression expression)
-                                            )
-                            )
-                            letBlock.declarations
-                    , expression = normalizeExpression letBlock.expression
-                    }
-                )
-
-        Node range (Expression.CaseExpression caseBlock) ->
-            Node range
-                (Expression.CaseExpression
-                    { expression = normalizeExpression caseBlock.expression
-                    , cases =
-                        caseBlock.cases
-                            |> List.map (Tuple.mapFirst normalizePattern)
-                            |> List.map (Tuple.mapSecond normalizeExpression)
-                    }
-                )
-
-        Node range (Expression.LambdaExpression lambda) ->
-            Node range
-                (Expression.LambdaExpression
-                    { args = List.map normalizePattern lambda.args
-                    , expression = normalizeExpression lambda.expression
-                    }
-                )
-
-        Node range (Expression.RecordExpr recordSetters) ->
-            Node range
-                (Expression.RecordExpr
-                    (List.map
-                        (\(Node setterRange ( name, expression )) ->
-                            Node setterRange ( name, normalizeExpression expression )
-                        )
-                        recordSetters
-                    )
-                )
-
-        Node range (Expression.ListExpr expressions) ->
-            Node range (Expression.ListExpr (List.map normalizeExpression expressions))
-
-        Node range (Expression.RecordAccess expression name) ->
-            Node range (Expression.RecordAccess (normalizeExpression expression) name)
-
-        Node range (Expression.RecordAccessFunction name) ->
-            Node range (Expression.RecordAccessFunction name)
-
-        Node range (Expression.RecordUpdateExpression recordName setters) ->
-            Node range
-                (Expression.RecordUpdateExpression recordName
-                    (List.map
-                        (\(Node setterRange ( name, expression )) ->
-                            Node setterRange ( name, normalizeExpression expression )
-                        )
-                        setters
-                    )
-                )
-
-        Node range (Expression.GLSLExpression source) ->
-            Node range (Expression.GLSLExpression source)
+        _ ->
+            node
