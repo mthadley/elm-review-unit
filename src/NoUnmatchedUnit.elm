@@ -212,7 +212,15 @@ collectDeps rawDeps =
     let
         collectModule : Elm.Docs.Module -> List ( String, Elm.Type.Type )
         collectModule mod =
-            List.map (\value -> ( mod.name ++ "." ++ value.name, value.tipe ))
+            List.filterMap
+                (\value ->
+                    case value.tipe of
+                        Elm.Type.Lambda _ _ ->
+                            Just ( mod.name ++ "." ++ value.name, value.tipe )
+
+                        _ ->
+                            Nothing
+                )
                 mod.values
 
         collectHelp : Dependency -> Dict String Elm.Type.Type -> Dict String Elm.Type.Type
