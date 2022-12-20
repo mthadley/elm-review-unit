@@ -119,18 +119,39 @@ fromModuleToProject =
 
 expressionVisitor : Node Expression -> ModuleContext -> List (Error {})
 expressionVisitor node context =
-    case Node.value (normalizeExpression node) of
-        Expression.Application (first :: firstArg :: restArgs) ->
-            case Node.value first of
-                Expression.FunctionOrValue _ name ->
-                    case lookupTypeFromNode context name first of
-                        Just tipe ->
-                            expressionVisitorWithType tipe (firstArg :: restArgs)
-
-                        Nothing ->
-                            []
+    case Node.value node of
+        Expression.OperatorApplication "<|" _ left right ->
+            case Node.value (removeParensFromExpr left) of
+                Expression.Application (fn :: args) ->
+                    reportUnitsInFunctionCall context fn (args ++ [ right ])
 
                 _ ->
+                    reportUnitsInFunctionCall context left [ right ]
+
+        Expression.OperatorApplication "|>" _ left right ->
+            case Node.value (removeParensFromExpr right) of
+                Expression.Application (fn :: args) ->
+                    reportUnitsInFunctionCall context fn (args ++ [ left ])
+
+                _ ->
+                    reportUnitsInFunctionCall context right [ left ]
+
+        Expression.Application (fn :: args) ->
+            reportUnitsInFunctionCall context fn args
+
+        _ ->
+            []
+
+
+reportUnitsInFunctionCall : ModuleContext -> Node Expression -> List (Node Expression) -> List (Error {})
+reportUnitsInFunctionCall context fn args =
+    case Node.value fn of
+        Expression.FunctionOrValue _ name ->
+            case lookupTypeFromNode context name fn of
+                Just tipe ->
+                    expressionVisitorWithType tipe (List.map removeParensFromExpr args)
+
+                Nothing ->
                     []
 
         _ ->
@@ -506,3 +527,13 @@ normalizeExpression node =
 
         Node range (Expression.GLSLExpression source) ->
             Node range (Expression.GLSLExpression source)
+
+
+removeParensFromExpr : Node Expression -> Node Expression
+removeParensFromExpr node =
+    case Node.value node of
+        Expression.ParenthesizedExpression expr ->
+            removeParensFromExpr expr
+
+        _ ->
+            node
