@@ -206,7 +206,7 @@ expressionVisitorWithType tipe args =
 
 patternVisitorWithType : Elm.Type.Type -> List (Node Pattern) -> List (Error {})
 patternVisitorWithType tipe argPatterns =
-    case ( tipe, List.map normalizePattern argPatterns ) of
+    case ( tipe, List.map removeParensFromPattern argPatterns ) of
         ( Elm.Type.Tuple [], ((Node _ Pattern.AllPattern) as node) :: _ ) ->
             [ reportUnitPatternError (Node.range node) ]
 
@@ -336,60 +336,21 @@ reportUnitPatternError range =
         [ Fix.replaceRangeBy range "()" ]
 
 
-normalizePattern : Node Pattern -> Node Pattern
-normalizePattern node =
-    case node of
-        Node range (Pattern.TuplePattern patterns) ->
-            Node range (Pattern.TuplePattern (List.map normalizePattern patterns))
-
-        Node range Pattern.AllPattern ->
-            Node range Pattern.AllPattern
-
-        Node range Pattern.UnitPattern ->
-            Node range Pattern.UnitPattern
-
-        Node range (Pattern.CharPattern char) ->
-            Node range (Pattern.CharPattern char)
-
-        Node range (Pattern.StringPattern string) ->
-            Node range (Pattern.StringPattern string)
-
-        Node range (Pattern.IntPattern int) ->
-            Node range (Pattern.IntPattern int)
-
-        Node range (Pattern.HexPattern hex) ->
-            Node range (Pattern.HexPattern hex)
-
-        Node range (Pattern.FloatPattern float) ->
-            Node range (Pattern.FloatPattern float)
-
-        Node range (Pattern.RecordPattern record) ->
-            Node range (Pattern.RecordPattern record)
-
-        Node range (Pattern.UnConsPattern left right) ->
-            Node range (Pattern.UnConsPattern (normalizePattern left) (normalizePattern right))
-
-        Node range (Pattern.ListPattern patterns) ->
-            Node range (Pattern.ListPattern (List.map normalizePattern patterns))
-
-        Node range (Pattern.VarPattern var) ->
-            Node range (Pattern.VarPattern var)
-
-        Node range (Pattern.NamedPattern name patterns) ->
-            Node range (Pattern.NamedPattern name (List.map normalizePattern patterns))
-
-        Node range (Pattern.AsPattern pattern name) ->
-            Node range (Pattern.AsPattern (normalizePattern pattern) name)
-
-        Node _ (Pattern.ParenthesizedPattern pattern) ->
-            pattern
-
-
 removeParensFromExpr : Node Expression -> Node Expression
 removeParensFromExpr node =
     case Node.value node of
         Expression.ParenthesizedExpression expr ->
             removeParensFromExpr expr
+
+        _ ->
+            node
+
+
+removeParensFromPattern : Node Pattern -> Node Pattern
+removeParensFromPattern node =
+    case Node.value node of
+        Pattern.ParenthesizedPattern pattern ->
+            removeParensFromPattern pattern
 
         _ ->
             node
