@@ -153,33 +153,7 @@ expressionVisitorWithType tipe args =
         ( Elm.Type.Lambda _ _, _ :: _ ) ->
             []
 
-        ( Elm.Type.Type _ (firstArg :: restArgs), node :: restNodes ) ->
-            expressionVisitorWithType firstArg [ node ]
-                ++ (List.map2 (\ta p -> expressionVisitorWithType ta [ p ]) restArgs restNodes
-                        |> List.concat
-                   )
-
-        ( Elm.Type.Type _ [], _ ) ->
-            []
-
-        ( Elm.Type.Tuple (firstArg :: restArgs), node :: restNodes ) ->
-            expressionVisitorWithType firstArg [ node ]
-                ++ (List.map2 (\ta p -> expressionVisitorWithType ta [ p ])
-                        restArgs
-                        restNodes
-                        |> List.concat
-                   )
-
-        ( Elm.Type.Tuple [], _ ) ->
-            []
-
-        ( Elm.Type.Record _ _, _ ) ->
-            []
-
-        ( Elm.Type.Var _, _ ) ->
-            []
-
-        ( _, [] ) ->
+        _ ->
             []
 
 
