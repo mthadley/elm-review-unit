@@ -210,25 +210,27 @@ lookupTypeFromName context name modulePath =
 collectDeps : Dict String Dependency -> Dict String Elm.Type.Type
 collectDeps rawDeps =
     let
-        collectModule : Elm.Docs.Module -> List ( String, Elm.Type.Type )
-        collectModule mod =
-            List.filterMap
-                (\value ->
+        collectModule : Elm.Docs.Module -> Dict String Elm.Type.Type -> Dict String Elm.Type.Type
+        collectModule mod acc =
+            List.foldl
+                (\value subAcc ->
                     case value.tipe of
                         Elm.Type.Lambda _ _ ->
-                            Just ( mod.name ++ "." ++ value.name, value.tipe )
+                            Dict.insert
+                                (mod.name ++ "." ++ value.name)
+                                value.tipe
+                                subAcc
 
                         _ ->
-                            Nothing
+                            subAcc
                 )
+                acc
                 mod.values
 
         collectHelp : a -> Dependency -> Dict String Elm.Type.Type -> Dict String Elm.Type.Type
         collectHelp _ dep deps =
             Dependency.modules dep
-                |> List.concatMap collectModule
-                |> Dict.fromList
-                |> Dict.union deps
+                |> List.foldl collectModule deps
     in
     Dict.foldl collectHelp Dict.empty rawDeps
 
