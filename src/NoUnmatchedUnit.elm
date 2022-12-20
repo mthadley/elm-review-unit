@@ -204,7 +204,7 @@ lookupTypeFromNode context name node =
 
 lookupTypeFromName : ModuleContext -> String -> List String -> Maybe Elm.Type.Type
 lookupTypeFromName context name modulePath =
-    Dict.get (String.join "." <| modulePath ++ [ name ]) context.qualifiedNameToType
+    Dict.get (String.join "." modulePath ++ "." ++ name) context.qualifiedNameToType
 
 
 collectDeps : Dict String Dependency -> Dict String Elm.Type.Type
