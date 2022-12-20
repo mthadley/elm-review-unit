@@ -114,7 +114,7 @@ fromProjectToModule =
 fromModuleToProject : Rule.ContextCreator ModuleContext ProjectContext
 fromModuleToProject =
     Rule.initContextCreator
-        (\{ qualifiedNameToType } -> { qualifiedNameToType = qualifiedNameToType })
+        (\_ -> { qualifiedNameToType = Dict.empty })
 
 
 expressionVisitor : Node Expression -> ModuleContext -> List (Error {})
