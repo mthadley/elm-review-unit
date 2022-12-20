@@ -174,33 +174,7 @@ expressionVisitorWithType tipe args =
         ( Elm.Type.Lambda _ _, _ :: _ ) ->
             []
 
-        ( Elm.Type.Type _ (firstArg :: restArgs), node :: restNodes ) ->
-            expressionVisitorWithType firstArg [ node ]
-                ++ (List.map2 (\ta p -> expressionVisitorWithType ta [ p ]) restArgs restNodes
-                        |> List.concat
-                   )
-
-        ( Elm.Type.Type _ [], _ ) ->
-            []
-
-        ( Elm.Type.Tuple (firstArg :: restArgs), node :: restNodes ) ->
-            expressionVisitorWithType firstArg [ node ]
-                ++ (List.map2 (\ta p -> expressionVisitorWithType ta [ p ])
-                        restArgs
-                        restNodes
-                        |> List.concat
-                   )
-
-        ( Elm.Type.Tuple [], _ ) ->
-            []
-
-        ( Elm.Type.Record _ _, _ ) ->
-            []
-
-        ( Elm.Type.Var _, _ ) ->
-            []
-
-        ( _, [] ) ->
+        _ ->
             []
 
 
@@ -251,25 +225,35 @@ lookupTypeFromNode context name node =
 
 lookupTypeFromName : ModuleContext -> String -> List String -> Maybe Elm.Type.Type
 lookupTypeFromName context name modulePath =
-    Dict.get (String.join "." <| modulePath ++ [ name ]) context.qualifiedNameToType
+    Dict.get (String.join "." modulePath ++ "." ++ name) context.qualifiedNameToType
 
 
 collectDeps : Dict String Dependency -> Dict String Elm.Type.Type
 collectDeps rawDeps =
     let
-        collectModule : Elm.Docs.Module -> List ( String, Elm.Type.Type )
-        collectModule mod =
-            List.map (\value -> ( mod.name ++ "." ++ value.name, value.tipe ))
+        collectModule : Elm.Docs.Module -> Dict String Elm.Type.Type -> Dict String Elm.Type.Type
+        collectModule mod acc =
+            List.foldl
+                (\value subAcc ->
+                    case value.tipe of
+                        Elm.Type.Lambda _ _ ->
+                            Dict.insert
+                                (mod.name ++ "." ++ value.name)
+                                value.tipe
+                                subAcc
+
+                        _ ->
+                            subAcc
+                )
+                acc
                 mod.values
 
-        collectHelp : Dependency -> Dict String Elm.Type.Type -> Dict String Elm.Type.Type
-        collectHelp dep deps =
+        collectHelp : a -> Dependency -> Dict String Elm.Type.Type -> Dict String Elm.Type.Type
+        collectHelp _ dep deps =
             Dependency.modules dep
-                |> List.concatMap collectModule
-                |> Dict.fromList
-                |> Dict.union deps
+                |> List.foldl collectModule deps
     in
-    List.foldl collectHelp Dict.empty <| Dict.values rawDeps
+    Dict.foldl collectHelp Dict.empty rawDeps
 
 
 declarationVisitor : Node Declaration -> List (Error {})
