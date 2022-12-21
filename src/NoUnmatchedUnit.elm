@@ -23,6 +23,8 @@ import Review.Rule as Rule exposing (Error, ModuleRuleSchema, Rule)
 
 {-| Reports when a Unit (`()`) is not matched in a pattern.
 
+🔧 Running with `--fix` will automatically remove all the reported errors.
+
     config =
         [ NoUnmatchedUnit.rule
         ]
@@ -70,6 +72,7 @@ rule =
             }
         |> Rule.withDependenciesProjectVisitor
             (\deps _ -> ( [], { qualifiedNameToType = collectDeps deps } ))
+        |> Rule.providesFixesForProjectRule
         |> Rule.fromProjectRuleSchema
 
 
